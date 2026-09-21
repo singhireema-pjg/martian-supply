@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Martian Supply Run: Space Cargo Challenge</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <!-- Plus Jakarta Sans Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            mars: {
+              light: '#ff7a59',
+              DEFAULT: '#e63946',
+              dark: '#9e2a2b',
+            },
+            space: {
+              card: '#0f172a',
+              border: '#1e293b',
+              accent: '#38bdf8'
+            }
+          },
+          animation: {
+            'float': 'float 3s ease-in-out infinite',
+            'shake': 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both',
+          },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-8px)' },
+            },
+            shake: {
+              '10%, 90%': { transform: 'translate3d(-1px, 0, 0)' },
+              '20%, 80%': { transform: 'translate3d(2px, 0, 0)' },
+              '30%, 50%, 70%': { transform: 'translate3d(-4px, 0, 0)' },
+              '40%, 60%': { transform: 'translate3d(4px, 0, 0)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090d16;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 4px;
+    }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .item-card {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .item-card:hover {
+      transform: translateY(-3px);
+    }
+    .star-bg {
+      background-image: 
+        radial-gradient(2px 2px at 20px 30px, #ffffff, rgba(0,0,0,0)),
+        radial-gradient(2px 2px at 40px 70px, #38bdf8, rgba(0,0,0,0)),
+        radial-gradient(1px 1px at 90px 40px, #ffffff, rgba(0,0,0,0)),
+        radial-gradient(2px 2px at 160px 120px, #f472b6, rgba(0,0,0,0));
+      background-repeat: repeat;
+      background-size: 200px 200px;
+    }
+  </style>
+</head>
+<body class="h-full font-sans antialiased star-bg selection:bg-red-500 selection:text-white flex flex-col min-h-screen">
+
+  <header class="bg-slate-900/80 border-b border-slate-800 sticky top-0 z-30 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4">
+      
+      <div class="flex items-center space-x-3">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-red-600 via-orange-500 to-amber-400 flex items-center justify-center shadow-lg shadow-red-500/20 animate-float">
+          <i data-lucide="rocket" class="w-6 h-6 text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-orange-300 to-amber-300">
+            MARTIAN SUPPLY RUN
+          </h1>
+          <p class="text-xs text-slate-400 font-semibold tracking-wide">Mars Expedition Cargo Challenge</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 sm:gap-3">
+        <button id="soundToggleBtn" onclick="toggleSound()" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition flex items-center gap-2 text-xs font-bold border border-slate-700">
+          <i data-lucide="volume-2" id="soundIcon" class="w-4 h-4 text-cyan-400"></i>
+          <span class="hidden sm:inline" id="soundLabel">Sound ON</span>
+        </button>
+
+        <button onclick="openModal('guideModal')" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 transition flex items-center gap-1.5 text-xs font-bold border border-slate-700">
+          <i data-lucide="help-circle" class="w-4 h-4 text-amber-400"></i>
+          <span class="hidden sm:inline">Mission Brief</span>
+        </button>
+
+        <button onclick="resetCargo()" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-rose-300 transition flex items-center gap-1.5 text-xs font-bold border border-slate-700">
+          <i data-lucide="rotate-ccw" class="w-4 h-4 text-rose-400"></i>
+          <span>Unpack All</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- LEFT COLUMN: Available Supplies Depot (Cols 1-7) -->
+    <section class="lg:col-span-7 flex flex-col gap-5">
+      
+      <!-- Supply Depot Header -->
+      <div class="glass-card p-5 rounded-2xl relative overflow-hidden border-slate-800">
+        <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-red-600/10 rounded-full blur-3xl pointer-events-none"></div>
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 text-xs font-black uppercase tracking-wider mb-2 border border-amber-500/20">
+              <i data-lucide="box" class="w-3.5 h-3.5"></i> Launchpad Storage
+            </div>
+            <h2 class="text-xl font-extrabold text-white">Select Cargo for Your Rocket</h2>
+            <p class="text-xs text-slate-300 mt-1">
+              Read each item description carefully. Decide what is most important for your 7-month trip and landing on Mars!
+            </p>
+          </div>
+
+          <!-- Weight Limit Pill -->
+          <div class="flex-shrink-0 bg-slate-900/90 border border-slate-700/80 p-3 rounded-2xl flex items-center gap-3 shadow-inner">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400 font-black">
+              <i data-lucide="weight" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <div class="text-[10px] uppercase font-bold text-slate-400">Weight Limit</div>
+              <div class="text-lg font-black text-amber-400">100 KG MAX</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Items Grid Container -->
+      <div id="itemsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        <!-- Dynamically rendered via JS -->
+      </div>
+    </section>
+
+    <section class="lg:col-span-5 flex flex-col gap-5">
+
+      <!-- Payload Gauge Card -->
+      <div class="glass-card p-5 rounded-2xl flex flex-col gap-4 border-slate-800 relative">
+        <div class="flex items-center justify-between">
+          <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+            <i data-lucide="scale" class="w-5 h-5 text-cyan-400"></i> Payload Monitor
+          </h3>
+          <span id="weightStatusBadge" class="px-3 py-1 rounded-full text-[11px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            Within Capacity
+          </span>
+        </div>
+
+        <div id="gaugeCard" class="bg-slate-900/90 rounded-2xl p-4 border border-slate-800 text-center relative overflow-hidden transition-all duration-300">
+          <span class="text-[11px] uppercase tracking-wider font-bold text-slate-400 block mb-1">Total Cargo Weight</span>
+          <div class="flex items-baseline justify-center gap-1">
+            <span id="currentWeightDisplay" class="text-5xl font-black text-amber-400 transition-colors duration-300">0</span>
+            <span class="text-lg font-extrabold text-slate-400">/ 100 kg</span>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="w-full h-3.5 bg-slate-950 rounded-full overflow-hidden p-0.5 border border-slate-800 mt-3 flex">
+            <div id="weightProgressBar" class="h-full bg-gradient-to-r from-emerald-400 via-amber-400 to-red-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+          <p id="weightSubtext" class="text-xs text-slate-400 mt-2">Select items to pack into the rocket.</p>
+        </div>
+      </div>
+
+      <!-- Visual Cargo Bay Display -->
+      <div class="glass-card p-5 rounded-2xl flex flex-col gap-3 border-slate-800 min-h-[220px] relative">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-bold text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
+            <i data-lucide="package-check" class="w-4 h-4 text-orange-400"></i> Packed Rocket Hold
+          </h3>
+          <span id="packedItemsCount" class="text-xs font-bold text-slate-400">0 Items Packed</span>
+        </div>
+
+        <div id="rocketVisual" class="bg-slate-950/70 rounded-2xl p-4 border border-slate-800/80 flex-1 flex flex-col items-center justify-center relative min-h-[160px] overflow-hidden">
+          
+          <div id="emptyHoldMsg" class="text-center p-4">
+            <div class="w-12 h-12 rounded-2xl bg-slate-900 text-slate-600 flex items-center justify-center mx-auto mb-2 border border-slate-800">
+              <i data-lucide="rocket" class="w-6 h-6"></i>
+            </div>
+            <p class="text-xs text-slate-400">Your rocket cargo hold is empty.</p>
+            <p class="text-[11px] text-slate-500">Tap items on the left to pack them!</p>
+          </div>
+
+          <div id="packedBadgesGrid" class="w-full grid grid-cols-2 gap-2 hidden">
+            <!-- Packed item pills appended dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <button 
+        id="launchBtn" 
+        onclick="launchRocket()" 
+        class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-red-600 via-orange-500 to-amber-500 hover:opacity-95 text-slate-950 font-black text-base shadow-xl shadow-red-600/25 active:scale-[0.98] transition-all flex items-center justify-center gap-3 group relative overflow-hidden"
+      >
+        <i data-lucide="rocket" class="w-6 h-6 text-slate-950 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"></i>
+        <span class="tracking-wider">LAUNCH ROCKET TO MARS!</span>
+      </button>
+
+    </section>
+  </main>
+
+
+  <div id="guideModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative">
+      <button onclick="closeModal('guideModal')" class="absolute top-4 right-4 p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-12 h-12 rounded-2xl bg-red-500/20 text-red-400 flex items-center justify-center font-bold border border-red-500/30">
+          <i data-lucide="rocket" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-black text-white">Commander Briefing</h3>
+          <p class="text-xs text-amber-400 font-bold uppercase tracking-wide">Mars Expedition Rules</p>
+        </div>
+      </div>
+
+      <div class="space-y-3.5 text-xs text-slate-300 leading-relaxed">
+        <div class="p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700/80">
+          <h4 class="font-extrabold text-amber-300 text-sm flex items-center gap-1.5 mb-1">
+            <i data-lucide="compass" class="w-4 h-4"></i> Your Mission Goal:
+          </h4>
+          <p>You are in charge of packing a space rocket heading to Mars. You can pack up to <strong>100 kg</strong> of cargo.</p>
+        </div>
+
+        <div class="p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700/80">
+          <h4 class="font-extrabold text-cyan-300 text-sm flex items-center gap-1.5 mb-1">
+            <i data-lucide="brain" class="w-4 h-4"></i> Think Carefully Before Launching:
+          </h4>
+          <ul class="list-disc list-inside space-y-1 text-slate-300">
+            <li>What do human beings need to survive a long journey in deep space?</li>
+            <li>What tools are required to accomplish your scientific mission on Mars?</li>
+            <li>What items are just for comfort or fun?</li>
+          </ul>
+        </div>
+      </div>
+
+      <button onclick="closeModal('guideModal')" class="w-full mt-5 py-3.5 rounded-xl bg-gradient-to-r from-red-500 to-amber-500 text-slate-950 font-black text-sm hover:opacity-95 transition">
+        Understood, Commander! Let's Pack!
+      </button>
+    </div>
+  </div>
+
+
+  <div id="outcomeModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div id="outcomeCard" class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 text-center shadow-2xl relative overflow-hidden">
+      
+      <div id="outcomeBadge" class="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl">
+        <i data-lucide="skull" id="outcomeIcon" class="w-10 h-10"></i>
+      </div>
+
+      <span id="outcomeTag" class="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border">
+        MISSION RESULT
+      </span>
+
+      <h3 id="outcomeTitle" class="text-2xl font-black text-white mt-3 mb-1">GAME OVER!</h3>
+      
+      <p id="outcomeDescription" class="text-sm text-slate-300 my-4 leading-relaxed">
+        Outcome details go here...
+      </p>
+
+      <div id="outcomeLessonBox" class="p-4 rounded-2xl text-xs font-medium text-left mb-6 border">
+        <!-- Educational lesson explanation injected here -->
+      </div>
+
+      <div class="flex gap-3">
+        <button onclick="closeModal('outcomeModal')" class="flex-1 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-extrabold text-sm transition border border-slate-700">
+          Re-adjust Cargo
+        </button>
+        <button onclick="resetCargo(); closeModal('outcomeModal');" class="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:opacity-90 text-white font-extrabold text-sm transition shadow-lg shadow-cyan-500/20">
+          Try Fresh Run
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+
+  <script>
+    const MAX_WEIGHT_KG = 100;
+    let soundEnabled = true;
+
+    // neutral list of items without explicit "Need" or "Want" labels
+    const depotItems = [
+      {
+        id: 'oxygen',
+        name: 'Oxygen Recycler',
+        weight: 50,
+        icon: 'wind',
+        category: 'need',
+        shortDesc: 'Filters carbon dioxide and provides clean breathing air for the crew.',
+        lesson: 'Oxygen is an essential NEED! Humans cannot live more than a few minutes without air to breathe.'
+      },
+      {
+        id: 'water',
+        name: 'Solar Water Purifier',
+        weight: 20,
+        icon: 'droplets',
+        category: 'need',
+        shortDesc: 'Recycles waste water into clean, safe drinking water.',
+        lesson: 'Clean water is an essential NEED! Staying hydrated is required for basic human survival.'
+      },
+      {
+        id: 'drill',
+        name: 'Scientific Ground Drill',
+        weight: 30,
+        icon: 'pickaxe',
+        category: 'need',
+        shortDesc: 'Drills deep into Martian soil to find ice and conduct soil research.',
+        lesson: 'Scientific tools are mission NEEDS! They are required to fulfill your objective of exploring Mars.'
+      },
+      {
+        id: 'medkit',
+        name: 'Emergency Medical Kit',
+        weight: 10,
+        icon: 'heart-pulse',
+        category: 'need',
+        shortDesc: 'First aid, bandages, and vital medicine for astronaut health.',
+        lesson: 'Medical supplies are essential NEEDS to keep crew members healthy during unexpected emergencies.'
+      },
+      {
+        id: 'icecream',
+        name: 'Freeze-Dried Ice Cream',
+        weight: 10,
+        icon: 'ice-cream',
+        category: 'want',
+        shortDesc: 'A sweet astronaut snack treat for dessert.',
+        lesson: 'Ice cream is a delicious WANT! It is fun to eat, but it will not keep you alive if you run out of air.'
+      },
+      {
+        id: 'bed',
+        name: 'Luxury Memory Foam Bed',
+        weight: 40,
+        icon: 'bed',
+        category: 'want',
+        shortDesc: 'An extra-soft mattress cushion for maximum sleep comfort.',
+        lesson: 'A luxury mattress is a comfort WANT! Sleeping on a standard hammock works fine and saves critical weight.'
+      },
+      {
+        id: 'arcade',
+        name: 'Space Arcade Console',
+        weight: 15,
+        icon: 'gamepad-2',
+        category: 'want',
+        shortDesc: 'A portable video game system to play games during free time.',
+        lesson: 'Video games are fun WANTS! Great for entertainment, but useless if basic survival items are missing.'
+      },
+      {
+        id: 'plushie',
+        name: 'Alien Plush Mascot',
+        weight: 5,
+        icon: 'smile',
+        category: 'want',
+        shortDesc: 'A cute stuffed alien doll to decorate the spaceship cabin.',
+        lesson: 'Stuffed toys are sweet WANTS! They make your room nice, but survival needs must always come first.'
+      }
+    ];
+
+    let packedItemIds = [];
+
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function playSound(type) {
+      if (!soundEnabled) return;
+      try {
+        if (!audioCtx) audioCtx = new AudioContext();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+
+        if (type === 'pack') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(300, now);
+          osc.frequency.exponentialRampToValueAtTime(600, now + 0.12);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+          osc.start(now);
+          osc.stop(now + 0.12);
+        } else if (type === 'unpack') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(500, now);
+          osc.frequency.exponentialRampToValueAtTime(250, now + 0.12);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+          osc.start(now);
+          osc.stop(now + 0.12);
+        } else if (type === 'fail') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(220, now);
+          osc.frequency.linearRampToValueAtTime(110, now + 0.4);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+          osc.start(now);
+          osc.stop(now + 0.4);
+        } else if (type === 'win') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(523.25, now);
+          osc.frequency.setValueAtTime(659.25, now + 0.1);
+          osc.frequency.setValueAtTime(783.99, now + 0.2);
+          osc.frequency.setValueAtTime(1046.50, now + 0.35);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+          osc.start(now);
+          osc.stop(now + 0.5);
+        }
+      } catch (e) {
+        console.log('Audio unsupported');
+      }
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      const soundIcon = document.getElementById('soundIcon');
+      const soundLabel = document.getElementById('soundLabel');
+      
+      if (soundEnabled) {
+        soundIcon.setAttribute('data-lucide', 'volume-2');
+        soundLabel.innerText = 'Sound ON';
+      } else {
+        soundIcon.setAttribute('data-lucide', 'volume-x');
+        soundLabel.innerText = 'Muted';
+      }
+      lucide.createIcons();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      renderItemsDepot();
+      updatePayloadStats();
+      lucide.createIcons();
+    });
+
+    function renderItemsDepot() {
+      const container = document.getElementById('itemsContainer');
+      container.innerHTML = '';
+
+      depotItems.forEach(item => {
+        const isPacked = packedItemIds.includes(item.id);
+
+        let borderStyle = isPacked 
+          ? 'border-cyan-500 bg-cyan-950/30 ring-2 ring-cyan-500/40'
+          : 'border-slate-800 bg-slate-900/70 hover:border-slate-700';
+
+        const card = document.createElement('div');
+        card.className = `item-card p-4 rounded-2xl border ${borderStyle} flex flex-col justify-between transition-all cursor-pointer select-none relative group`;
+        card.onclick = () => toggleItem(item.id);
+
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[11px] font-black text-amber-400 flex items-center gap-1 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+                <i data-lucide="weight" class="w-3.5 h-3.5 inline"></i> ${item.weight} kg
+              </span>
+            </div>
+
+            <div class="flex items-center gap-2.5 my-2">
+              <div class="w-9 h-9 rounded-xl ${isPacked ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'bg-slate-800/80 text-slate-400'} flex items-center justify-center flex-shrink-0">
+                <i data-lucide="${item.icon}" class="w-5 h-5"></i>
+              </div>
+              <h3 class="text-sm font-extrabold text-white group-hover:text-amber-300 transition-colors">
+                ${item.name}
+              </h3>
+            </div>
+
+            <p class="text-[11px] text-slate-300 leading-snug">
+              ${item.shortDesc}
+            </p>
+          </div>
+
+          <div class="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-xs font-bold">
+            ${isPacked ? `
+              <span class="text-emerald-400 flex items-center gap-1">
+                <i data-lucide="check-circle-2" class="w-4 h-4"></i> Packed in Rocket
+              </span>
+              <span class="text-xs text-slate-400 hover:text-rose-400">Unpack</span>
+            ` : `
+              <span class="text-slate-400 group-hover:text-slate-200">
+                Tap to load item
+              </span>
+              <i data-lucide="plus-circle" class="w-4 h-4 text-slate-400 group-hover:text-amber-400"></i>
+            `}
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+
+      lucide.createIcons();
+    }
+
+    function toggleItem(itemId) {
+      if (packedItemIds.includes(itemId)) {
+        packedItemIds = packedItemIds.filter(id => id !== itemId);
+        playSound('unpack');
+      } else {
+        packedItemIds.push(itemId);
+        playSound('pack');
+      }
+
+      renderItemsDepot();
+      updatePayloadStats();
+    }
+
+    function resetCargo() {
+      packedItemIds = [];
+      playSound('unpack');
+      renderItemsDepot();
+      updatePayloadStats();
+    }
+
+    function updatePayloadStats() {
+      let totalWeight = 0;
+
+      packedItemIds.forEach(id => {
+        const item = depotItems.find(i => i.id === id);
+        if (item) {
+          totalWeight += item.weight;
+        }
+      });
+
+      document.getElementById('currentWeightDisplay').innerText = totalWeight;
+      document.getElementById('packedItemsCount').innerText = `${packedItemIds.length} Items Packed`;
+
+      const percent = Math.min(100, (totalWeight / MAX_WEIGHT_KG) * 100);
+      const bar = document.getElementById('weightProgressBar');
+      bar.style.width = `${percent}%`;
+
+      const weightDisplay = document.getElementById('currentWeightDisplay');
+      const badge = document.getElementById('weightStatusBadge');
+      const gaugeCard = document.getElementById('gaugeCard');
+      const subtext = document.getElementById('weightSubtext');
+
+      if (totalWeight > MAX_WEIGHT_KG) {
+        weightDisplay.className = "text-5xl font-black text-rose-500 transition-colors duration-300 animate-pulse";
+        badge.className = "px-3 py-1 rounded-full text-[11px] font-black uppercase bg-rose-500/20 text-rose-300 border border-rose-500/30";
+        badge.innerText = "OVERWEIGHT!";
+        gaugeCard.className = "bg-slate-900/90 rounded-2xl p-4 border border-rose-500/50 text-center relative overflow-hidden animate-shake";
+        subtext.innerText = "⚠️ Rocket is too heavy to launch!";
+      } else if (totalWeight === MAX_WEIGHT_KG) {
+        weightDisplay.className = "text-5xl font-black text-amber-400 transition-colors duration-300";
+        badge.className = "px-3 py-1 rounded-full text-[11px] font-black uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30";
+        badge.innerText = "100% Capacity";
+        gaugeCard.className = "bg-slate-900/90 rounded-2xl p-4 border border-amber-500/40 text-center relative overflow-hidden";
+        subtext.innerText = "Exact maximum payload capacity reached!";
+      } else {
+        weightDisplay.className = "text-5xl font-black text-emerald-400 transition-colors duration-300";
+        badge.className = "px-3 py-1 rounded-full text-[11px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+        badge.innerText = "Within Capacity";
+        gaugeCard.className = "bg-slate-900/90 rounded-2xl p-4 border border-slate-800 text-center relative overflow-hidden";
+        subtext.innerText = `${MAX_WEIGHT_KG - totalWeight} kg remaining space available.`;
+      }
+
+      renderVisualCargoHold();
+    }
+
+    function renderVisualCargoHold() {
+      const emptyMsg = document.getElementById('emptyHoldMsg');
+      const grid = document.getElementById('packedBadgesGrid');
+      grid.innerHTML = '';
+
+      if (packedItemIds.length === 0) {
+        emptyMsg.classList.remove('hidden');
+        grid.classList.add('hidden');
+        return;
+      }
+
+      emptyMsg.classList.add('hidden');
+      grid.classList.remove('hidden');
+
+      packedItemIds.forEach(id => {
+        const item = depotItems.find(i => i.id === id);
+        if (!item) return;
+
+        const pill = document.createElement('div');
+        pill.className = "p-2 rounded-xl bg-slate-900/90 border border-slate-700/80 text-slate-200 flex items-center justify-between text-xs";
+
+        pill.innerHTML = `
+          <div class="flex items-center gap-1.5 truncate">
+            <i data-lucide="${item.icon}" class="w-3.5 h-3.5 flex-shrink-0 text-cyan-400"></i>
+            <span class="font-bold truncate">${item.name}</span>
+          </div>
+          <span class="text-[10px] font-black text-amber-400 flex-shrink-0 ml-1">${item.weight}kg</span>
+        `;
+
+        grid.appendChild(pill);
+      });
+
+      lucide.createIcons();
+    }
+
+    function launchRocket() {
+      let totalWeight = 0;
+      let hasOxygen = false;
+      let hasWater = false;
+      let hasDrill = false;
+      let hasBed = false;
+      let hasIceCream = false;
+
+      packedItemIds.forEach(id => {
+        const item = depotItems.find(i => i.id === id);
+        if (item) {
+          totalWeight += item.weight;
+          if (item.id === 'oxygen') hasOxygen = true;
+          if (item.id === 'water') hasWater = true;
+          if (item.id === 'drill') hasDrill = true;
+          if (item.id === 'bed') hasBed = true;
+          if (item.id === 'icecream') hasIceCream = true;
+        }
+      });
+
+      const launchBtn = document.getElementById('launchBtn');
+      launchBtn.classList.add('animate-pulse');
+
+      setTimeout(() => {
+        launchBtn.classList.remove('animate-pulse');
+
+        // SCENARIO 1: Over 100 kg weight limit
+        if (totalWeight > MAX_WEIGHT_KG) {
+          showOutcome({
+            success: false,
+            title: "TOO HEAVY TO LAUNCH!",
+            tag: "CRITICAL WEIGHT OVERLOAD",
+            tagBg: "bg-rose-500/20 text-rose-300 border-rose-500/30",
+            icon: "weight",
+            iconBg: "bg-rose-500/20 text-rose-400 border-rose-500/30",
+            desc: `Your rocket weighed <strong>${totalWeight} kg</strong>, exceeding the 100 kg limit! The heavy rocket could not lift off the launchpad.`,
+            lesson: "💡 <strong>Needs vs. Wants Lesson:</strong> When rocket space is limited, you MUST leave luxury items behind so you can pack survival essentials!"
+          });
+          playSound('fail');
+          return;
+        }
+
+        // SCENARIO 2: Missing Oxygen (Selected luxury wants without air)
+        if (!hasOxygen) {
+          let extraMsg = "";
+          if (hasBed && hasIceCream) {
+            extraMsg = " You enjoyed the luxury bed and freeze-dried ice cream on day 1, but by day 3 there was no air left to breathe!";
+          }
+
+          showOutcome({
+            success: false,
+            title: "GAME OVER: RAN OUT OF AIR!",
+            tag: "SUFFOCATION IN SPACE",
+            tagBg: "bg-rose-500/20 text-rose-300 border-rose-500/30",
+            icon: "wind",
+            iconBg: "bg-rose-500/20 text-rose-400 border-rose-500/30",
+            desc: `Your crew launched into deep space, but you forgot to pack the <strong>Oxygen Recycler</strong>!${extraMsg}`,
+            lesson: "💡 <strong>Needs vs. Wants Lesson:</strong> Oxygen is an essential <strong>NEED</strong>! Comfort items like luxury beds or ice cream are <strong>WANTS</strong>. Wants mean nothing if your basic survival needs aren't met first."
+          });
+          playSound('fail');
+          return;
+        }
+
+        // SCENARIO 3: Has Oxygen, but missing Water
+        if (!hasWater) {
+          showOutcome({
+            success: false,
+            title: "GAME OVER: DEHYDRATION!",
+            tag: "SURVIVAL FAILURE",
+            tagBg: "bg-rose-500/20 text-rose-300 border-rose-500/30",
+            icon: "droplets",
+            iconBg: "bg-rose-500/20 text-rose-400 border-rose-500/30",
+            desc: "You had plenty of air, but forgot to pack the <strong>Solar Water Purifier</strong>! The astronauts ran out of fresh drinking water halfway to Mars.",
+            lesson: "💡 <strong>Needs vs. Wants Lesson:</strong> Clean drinking water is an essential survival <strong>NEED</strong>! Always secure survival needs before choosing fun wants."
+          });
+          playSound('fail');
+          return;
+        }
+
+        // SCENARIO 4: Mission Success with Air, Water, and Science Drill
+        if (hasOxygen && hasWater && hasDrill) {
+          showOutcome({
+            success: true,
+            title: "MISSION ACCOMPLISHED!",
+            tag: "SUCCESSFUL MARS EXPEDITION",
+            tagBg: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+            icon: "trophy",
+            iconBg: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+            desc: `🎉 Outstanding critical thinking, Commander! Your crew safely reached Mars with clean air, fresh water, and the <strong>Scientific Ground Drill</strong> to discover Martian water ice!`,
+            lesson: "🌟 <strong>Critical Thinking Master:</strong> You successfully prioritized essential <strong>NEEDS</strong> (Oxygen, Water, Science Drill) over comfort <strong>WANTS</strong>!"
+          });
+          playSound('win');
+          triggerConfetti();
+          return;
+        }
+
+        // SCENARIO 5: Survived basic trip, but missing Scientific Drill
+        showOutcome({
+          success: true,
+          title: "SAFE LANDING (NO SCIENCE)",
+          tag: "PARTIAL MISSION SUCCESS",
+          tagBg: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+          icon: "check-circle-2",
+          iconBg: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+          desc: "Your crew survived the trip with air and water! However, you forgot the <strong>Scientific Ground Drill</strong>, so the astronauts couldn't conduct research on Mars.",
+          lesson: "⚖️ <strong>Good Effort!</strong> You packed basic survival NEEDS, but missed the tool required for long-term mission growth!"
+        });
+        playSound('win');
+
+      }, 400);
+    }
+
+    function showOutcome(data) {
+      document.getElementById('outcomeTitle').innerText = data.title;
+      document.getElementById('outcomeDescription').innerHTML = data.desc;
+      
+      const tag = document.getElementById('outcomeTag');
+      tag.innerText = data.tag;
+      tag.className = `px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border ${data.tagBg}`;
+
+      const badge = document.getElementById('outcomeBadge');
+      badge.className = `w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl border ${data.iconBg}`;
+
+      const icon = document.getElementById('outcomeIcon');
+      icon.setAttribute('data-lucide', data.icon);
+
+      const lessonBox = document.getElementById('outcomeLessonBox');
+      lessonBox.className = data.success 
+        ? "p-4 rounded-2xl text-xs font-medium text-left mb-6 border bg-emerald-950/40 border-emerald-500/30 text-emerald-200"
+        : "p-4 rounded-2xl text-xs font-medium text-left mb-6 border bg-rose-950/40 border-rose-500/30 text-rose-200";
+      
+      lessonBox.innerHTML = data.lesson;
+
+      lucide.createIcons();
+      openModal('outcomeModal');
+    }
+
+    function triggerConfetti() {
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 120,
+          spread: 80,
+          origin: { y: 0.6 }
+        });
+      }
+    }
+
+    function openModal(modalId) {
+      document.getElementById(modalId).classList.remove('hidden');
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.add('hidden');
+    }
+  </script>
+</body>
+</html>
